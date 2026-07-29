@@ -82,6 +82,13 @@ function extractJsonPayload(raw: string): string {
   return trimmed;
 }
 
+
+function normalizeJsonText(value: string): string {
+  return value
+    .replace(/[“”]/g, '"')
+    .replace(/,\s*([}\]])/g, '$1');
+}
+
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -109,17 +116,119 @@ function list(value: unknown, field: string): unknown[] {
   return value;
 }
 
+
+const sentenceCategories = ['daily', 'work', 'travel', 'opinion', 'emotion'];
+const correctionCategories = ['grammar', 'spelling', 'word_choice', 'collocation', 'naturalness'];
+
+function normalizeSentenceCategory(value: unknown, sourceTag: unknown) {
+  const category = String(value ?? '').toLowerCase();
+  if (sentenceCategories.includes(category as typeof sentenceCategories[number])) return category;
+  const context = category + ' ' + String(sourceTag ?? '');
+  if (/work|career|job|office/.test(context)) return 'work';
+  if (/travel|trip|journey/.test(context)) return 'travel';
+  if (/emotion|feeling|bored|inner|reflection|self/.test(context)) return 'emotion';
+  if (/opinion|debate|argument|comparison|value|discussion/.test(context)) return 'opinion';
+  return 'daily';
+}
+
+function normalizeCorrectionCategory(value: unknown) {
+  const category = String(value ?? '').toLowerCase();
+  if (correctionCategories.includes(category as typeof correctionCategories[number])) return category;
+  if (/spell/.test(category)) return 'spelling';
+  if (/grammar|tense|article|preposition/.test(category)) return 'grammar';
+  if (/collocation|phrase/.test(category)) return 'collocation';
+  if (/word|vocab/.test(category)) return 'word_choice';
+  return 'naturalness';
+}
+
+function normalizeReportShape(value: Record<string, unknown>): Record<string, unknown> {
+  const input = { ...value };
+  const feedback = isObject(input.feedback) ? input.feedback : {};
+  const scoreNames: ScoreName[] = ['overall', 'fluency', 'grammar', 'vocabulary', 'naturalness', 'communication'];
+
+  input.learning_date ??= input.date;
+  input.topics ??= typeof input.topic === 'string' ? [input.topic] : input.topic;
+  input.qualitative_review ??= feedback.thinking_growth ?? feedback.summary;
+  input.strengths ??= feedback.strengths ?? [];
+  input.improvements ??= feedback.focus_areas ?? [];
+  input.next_goals ??= feedback.next_goals ?? [];
+  input.vocabulary ??= [];
+  input.sentences ??= [];
+  input.corrections ??= [];
+
+  if (!isObject(input.scores) && scoreNames.every(name => typeof input[name] === 'number')) {
+    input.scores = Object.fromEntries(scoreNames.map(name => [name, input[name]]));
+  }
+
+  if (Array.isArray(input.improvements)) {
+    input.improvements = input.improvements.map(item => typeof item === 'string'
+      ? { category: '学习建议', content: item, action_label: '查看建议', target_tab: 'phrase' }
+      : item);
+  }
+
+  if (Array.isArray(input.vocabulary)) {
+    input.vocabulary = input.vocabulary.map(item => isObject(item) ? {
+      ...item,
+      term: item.term ?? item.word,
+      meaning_zh: item.meaning_zh ?? item.meaning ?? item.translation,
+    } : item);
+  }
+
+  const normalizedSentences: unknown[] = [];
+  const sentenceCorrections: unknown[] = [];
+  if (Array.isArray(input.sentences)) {
+    input.sentences.forEach(item => {
+      if (!isObject(item)) {
+        normalizedSentences.push(item);
+        return;
+      }
+      if (!item.pattern && (item.original || item.corrected)) {
+        sentenceCorrections.push({
+          category: normalizeCorrectionCategory(item.category),
+          original_sentence: item.original,
+          corrected_sentence: item.corrected,
+          explanation: item.note ?? item.explanation,
+        });
+        return;
+      }
+      normalizedSentences.push({
+        ...item,
+        category: normalizeSentenceCategory(item.category, item.source_tag),
+      });
+    });
+    input.sentences = normalizedSentences;
+  }
+
+  if (Array.isArray(input.corrections)) {
+    input.corrections = [...input.corrections, ...sentenceCorrections].map(item => isObject(item) ? {
+      ...item,
+      category: normalizeCorrectionCategory(item.category),
+      original_sentence: item.original_sentence ?? item.original,
+      corrected_sentence: item.corrected_sentence ?? item.corrected,
+      explanation: item.explanation ?? item.note,
+    } : item);
+  }
+
+  return input;
+}
+
 export function parseReportImport(raw: string): ImportPreview {
   if (!raw.trim()) throw new Error('请粘贴 JSON，或上传 JSON/TXT 文件');
   if (raw.length > MAX_PAYLOAD_LENGTH) throw new Error('导入内容超过 250 KB 限制');
 
-  let input: unknown;
+  let input: Record<string, unknown>;
+  const jsonPayload = extractJsonPayload(raw);
   try {
-    input = JSON.parse(extractJsonPayload(raw));
+    input = JSON.parse(jsonPayload);
   } catch {
-    throw new Error('没有识别到有效的 LingoTrace 日报。支持纯 JSON、AI 输出的 JSON 代码块，或带 LINGOTRACE_REPORT_V1_BEGIN/END 标记的 TXT');
+    try {
+      input = JSON.parse(normalizeJsonText(jsonPayload));
+    } catch {
+      throw new Error('JSON 内容不完整或引号未闭合。请让 AI 重新生成完整日报；普通字段偏差可自动修复，但被截断的内容无法恢复。');
+    }
   }
   if (!isObject(input)) throw new Error('导入内容必须是一个 JSON 对象');
+  input = normalizeReportShape(input);
   if (input.schema_version !== 'LINGOTRACE_REPORT_V1') {
     throw new Error('schema_version 必须是 LINGOTRACE_REPORT_V1');
   }
@@ -167,7 +276,6 @@ export function parseReportImport(raw: string): ImportPreview {
       ),
     };
   });
-  const sentenceCategories = ['daily', 'work', 'travel', 'opinion', 'emotion'];
   const sentences = list(input.sentences, 'sentences').map((item, index) => {
     if (!isObject(item)) throw new Error(`sentences[${index}] 必须是对象`);
     const category = item.category ?? 'daily';
@@ -181,7 +289,6 @@ export function parseReportImport(raw: string): ImportPreview {
       source_tag: optionalText(item.source_tag, `sentences[${index}].source_tag`),
     };
   });
-  const correctionCategories = ['grammar', 'spelling', 'word_choice', 'collocation', 'naturalness'];
   const corrections = list(input.corrections, 'corrections').map((item, index) => {
     if (!isObject(item)) throw new Error(`corrections[${index}] 必须是对象`);
     if (!correctionCategories.includes(String(item.category))) throw new Error(`corrections[${index}].category 无效`);
