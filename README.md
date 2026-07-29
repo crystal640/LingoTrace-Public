@@ -1,4 +1,5 @@
 # LingoTrace
+**在线体验：** [https://lingo-trace.vercel.app/](https://lingo-trace.vercel.app/)
 
 LingoTrace is a mobile-first English learning tracker for importing structured ChatGPT speaking reports, reviewing vocabulary and sentence patterns, tracking corrections, and generating targeted grammar practice.
 
