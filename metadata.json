@@ -1,0 +1,6 @@
+{
+  "name": "LingoTrace",
+  "description": "高保真个人英语学习记录 App，包含 ChatGPT 学习复盘、莫兰迪色系主题、单词复习、语法纠错库、句型卡片与数据可视化。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

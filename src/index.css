@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #F1EFE8;
+    --card-bg: #FAF8F4;
+    --card-border: #E3E0D8;
+    --text-primary: #30332F;
+    --text-secondary: #858A84;
+    --text-muted: #A3A8A4;
+    
+    /* Active Theme Accent - Default: Sage Green (#3D5E43) */
+    --accent-color: #3D5E43;
+    --accent-light: #D8E6DB;
+    --accent-dark: #223B27;
+    --accent-rgb: 61, 94, 67;
+  }
+
+  .dark {
+    --bg-main: #131412;
+    --card-bg: #1C1D1A;
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-primary: #ECEAE4;
+    --text-secondary: #9FA4A0;
+    --text-muted: #6E736F;
+    
+    --accent-light: rgba(61, 94, 67, 0.18);
+  }
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Serif font for elegant English quotes */
+.font-serif-quote {
+  font-family: 'Newsreader', Georgia, Cambria, 'Times New Roman', Times, serif;
+}
+
+/* Glassmorphism bottom bar */
+.glass-nav {
+  background: rgba(252, 251, 248, 0.82);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-top: 1px solid rgba(180, 175, 165, 0.18);
+}
+
+.dark .glass-nav {
+  background: rgba(37, 40, 37, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(158, 173, 155, 0.3);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(158, 173, 155, 0.6);
+}
+
+/* Apple-style smooth touch response */
+.active-press {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
+}
+.active-press:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* 3D Card Flip utility */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
