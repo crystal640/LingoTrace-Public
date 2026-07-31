@@ -114,7 +114,14 @@ Deno.serve(async req => {
     if (correctionError || !correction) throw new Error('找不到这条纠错记录');
 
     let questions = buildFallbackQuestions(correction);
-    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    const geminiAllowedUserIds = new Set(
+      (Deno.env.get('GEMINI_ALLOWED_USER_IDS') ?? '')
+        .split(',')
+        .map(userId => userId.trim())
+        .filter(Boolean),
+    );
+    const isGeminiAllowed = geminiAllowedUserIds.has(user.id);
+    const apiKey = isGeminiAllowed ? Deno.env.get('GEMINI_API_KEY') : undefined;
     if (apiKey) {
       try {
         const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
@@ -131,8 +138,10 @@ Deno.serve(async req => {
       } catch (aiError) {
         console.warn('Falling back to local practice questions:', aiError instanceof Error ? aiError.message : aiError);
       }
-    } else {
+    } else if (isGeminiAllowed) {
       console.warn('GEMINI_API_KEY is missing; using local practice questions');
+    } else {
+      console.info('Gemini is not enabled for this user; using local practice questions');
     }
     const { data: session, error: insertError } = await supabase.from('practice_sessions')
       .insert({ user_id: user.id, correction_id: correction.id, practice_date: today, questions }).select('id').single();
