@@ -8,16 +8,26 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="LingoTrace" />
     <meta name="description" content="个人英语学习、复习与练习记录。" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
     <title>LingoTrace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Plus+Jakarta+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-CI7brCVO.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BQ2BGD-9.css">
+    
+    <!-- 关键修复：直接注入环境变量 -->
+    <script>
+      // 这里直接写入你的 Supabase 配置
+      window.__SUPABASE_CONFIG__ = {
+        url: "https://ymvuhuaakebtmrrxyt.supabase.co",
+        anonKey: "sb_publishable_7Dy-DBej9-1qmb8YYWiFug_gVpabobe"
+      };
+    </script>
+
+    <script type="module" crossorigin src="assets/index-CI7brCVO.js"></script>
+    <link rel="stylesheet" crossorigin href="assets/index-BQ2BGD-9.css">
   </head>
   <body>
     <div id="root"></div>
   </body>
-</html>
+  </html>
